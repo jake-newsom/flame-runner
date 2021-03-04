@@ -1,4 +1,4 @@
-# kcm_app
+# Flame tests
 
 A new Flutter project.
 
