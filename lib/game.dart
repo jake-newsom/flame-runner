@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:kcm_app/floor.dart';
 
 import 'package:flame/game.dart';
+import 'package:flame/flame.dart';
 import 'package:flame/gestures.dart';
 import 'package:flame/components.dart';
 import 'package:flame/layers.dart';
@@ -51,6 +52,21 @@ class MyGame extends BaseGame with DoubleTapDetector {
     super.update(dt);
 
     updateFloors();
+    // switch (direction) {
+    //   case 'down':
+    //     ninja.y += 1;
+    //     break;
+    //   case 'up':
+    //     ninja.y -= 1;
+    //     break;
+    // }
+
+    // if (ninja.y > (this.size.y - ninja.height)) {
+    //   direction = "up";
+    // }
+    // if (ninja.y < 0) {
+    //   direction = "down";
+    // }
   }
 
   @override
