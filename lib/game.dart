@@ -4,75 +4,66 @@ import 'dart:math';
 import 'package:kcm_app/floor.dart';
 
 import 'package:flame/game.dart';
-import 'package:flame/flame.dart';
 import 'package:flame/gestures.dart';
 import 'package:flame/components.dart';
 import 'package:flame/layers.dart';
 
 class MyGame extends BaseGame with DoubleTapDetector {
   Random rng;
-  SpriteComponent ninja = SpriteComponent();
+  SpriteComponent playerSprite = SpriteComponent();
 
   Layer backgroundLayer;
+  Layer gameLayer;
   List<Floor> floors;
 
-  bool running = true;
-  bool jumping = false;
-  String direction = "down";
+  bool running = false;
 
   @override
   Future<void> onLoad() async {
-    initialize();
-
-    print('loading assets');
-    ninja
-      ..sprite = await loadSprite("ninja.png")
-      ..size = Vector2(100.0, 100.0)
-      ..x = 60
-      ..y = this.size.y - ninja.size.y;
-    add(ninja);
+    initializeGraphics();
+    initializeVariables();
 
     for (var i = 0; i < 3; i++) {
       createNewFloor();
     }
   }
 
-  void initialize() {
+  void initializeVariables() {
     this.floors = [];
     this.rng = new Random();
   }
 
-  // @override
-  // render(Canvas canvas) {
-  //   backgroundLayer.render(canvas);
-  // }
+  void initializeGraphics() async {
+    /** initialize background */
+    final backgroundSprite = Sprite(await images.load('background.png'));
+    this.backgroundLayer = BackgroundLayer(backgroundSprite);
+
+    /** player sprite */
+    this.playerSprite
+      ..sprite = await loadSprite("ninja.png")
+      ..size = Vector2(100.0, 100.0)
+      ..x = 60
+      ..y = this.size.y - this.playerSprite.size.y;
+
+    this.gameLayer = GameLayer(this);
+    this.running = true;
+  }
 
   @override
   update(double dt) {
     super.update(dt);
-
-    updateFloors();
-    // switch (direction) {
-    //   case 'down':
-    //     ninja.y += 1;
-    //     break;
-    //   case 'up':
-    //     ninja.y -= 1;
-    //     break;
-    // }
-
-    // if (ninja.y > (this.size.y - ninja.height)) {
-    //   direction = "up";
-    // }
-    // if (ninja.y < 0) {
-    //   direction = "down";
-    // }
+    if (this.running) {
+      updateFloors();
+    }
   }
 
   @override
   void render(Canvas canvas) {
     super.render(canvas);
-    // this.backgroundLayer.render(canvas);
+    try {
+      this.backgroundLayer.render(canvas);
+      this.gameLayer.render(canvas);
+    } catch (e) {}
   }
 
   @override
@@ -86,7 +77,6 @@ class MyGame extends BaseGame with DoubleTapDetector {
       resumeEngine();
     }
     running = !running;
-    print("jump bitch");
   }
 
   void updateFloors() {
@@ -110,35 +100,45 @@ class MyGame extends BaseGame with DoubleTapDetector {
     var startX = 0;
     if (this.floors.length > 0) {
       startX += (this.floors.last.x + this.floors.last.width + gap).round();
+      print(startX.toString());
     }
 
     Floor floor = Floor()
       ..x = startX.toDouble()
-      ..y = this.size.y
+      ..y = this.size.y - 20
       ..height = 20
-      ..width = this.rng.nextInt(screenWidth).toDouble() + minWidth;
+      ..width = this.rng.nextInt(screenWidth).toDouble() + minWidth
+      ..anchor = Anchor.topLeft;
 
     this.floors.add(floor);
-    add(floor);
   }
 }
 
 class BackgroundLayer extends PreRenderedLayer {
-  // final Sprite sprite;
+  final Sprite sprite;
 
-  BackgroundLayer() {
-    // preProcessors.add(ShadowProcessor());
-  }
+  BackgroundLayer(this.sprite);
 
   @override
   void drawLayer() {
-    // sprite.render(
-    //   canvas,
-    //   position: Vector2(50, 200),
-    //   size: Vector2(300, 150),
-    // );
-    var rect = new Rect.fromLTWH(0.0, 0.0, 600.0, 600.0);
-    var paint = new Paint()..color = new Color(0xFFFFffff);
-    canvas.drawRect(rect, paint);
+    sprite.render(canvas, position: Vector2(0, 0));
+  }
+}
+
+class GameLayer extends DynamicLayer {
+  final MyGame game;
+
+  GameLayer(this.game);
+
+  @override
+  void drawLayer() {
+    // draw player
+    game.playerSprite.sprite.render(canvas,
+        position: Vector2(game.playerSprite.x, game.playerSprite.y));
+
+    for (var i = 0; i < game.floors.length; i++) {
+      var floor = game.floors[i];
+      floor.render(canvas);
+    }
   }
 }
