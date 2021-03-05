@@ -7,6 +7,8 @@ import 'package:flame/game.dart';
 import 'package:flame/gestures.dart';
 import 'package:flame/components.dart';
 import 'package:flame/layers.dart';
+import 'package:flame/palette.dart';
+import 'package:flutter/material.dart';
 
 class MyGame extends BaseGame with DoubleTapDetector {
   Random rng;
@@ -81,8 +83,8 @@ class MyGame extends BaseGame with DoubleTapDetector {
 
   void updateFloors() {
     for (var floor in floors) {
-      floor.x -= 5;
-      if (0 > (floor.x + floor.width)) {
+      floor.position.x -= 5;
+      if (floor.position.x + floor.width < 0) {
         floors.remove(floor);
         createNewFloor();
       }
@@ -90,22 +92,19 @@ class MyGame extends BaseGame with DoubleTapDetector {
   }
 
   void createNewFloor() {
-    print("create a new floor");
-
-    var screenWidth = this.size.x.round();
+    var screenWidth = (this.size.x).round();
     var minWidth = screenWidth / 2;
 
-    var gap = this.rng.nextInt((screenWidth / 3).round()) + (screenWidth / 10);
+    var gap = this.rng.nextInt((screenWidth / 2).round()) + (screenWidth / 10);
 
     var startX = 0;
     if (this.floors.length > 0) {
-      startX += (this.floors.last.x + this.floors.last.width + gap).round();
-      print(startX.toString());
+      startX +=
+          (this.floors.last.position.x + this.floors.last.width + gap).round();
     }
 
     Floor floor = Floor()
-      ..x = startX.toDouble()
-      ..y = this.size.y - 20
+      ..position = Vector2(startX.toDouble(), this.size.y - 20)
       ..height = 20
       ..width = this.rng.nextInt(screenWidth).toDouble() + minWidth
       ..anchor = Anchor.topLeft;
@@ -136,8 +135,8 @@ class GameLayer extends DynamicLayer {
     game.playerSprite.sprite.render(canvas,
         position: Vector2(game.playerSprite.x, game.playerSprite.y));
 
-    for (var i = 0; i < game.floors.length; i++) {
-      var floor = game.floors[i];
+    // draw floor tiles
+    for (var floor in this.game.floors) {
       floor.render(canvas);
     }
   }

@@ -7,15 +7,14 @@ import 'package:flame/components.dart';
 import 'package:flame/palette.dart';
 import 'package:flutter/material.dart';
 
-class Floors {
-  List<Floor> floors;
-}
-
 class Floor extends PositionComponent {
+  String name;
+
   @override
   void render(Canvas c) {
-    super.render(c);
-    c.drawRect(size.toRect(), BasicPalette.white.paint);
+    // this super call is severely throwing off positioning ... cannot figure it out.
+    // super.render(c);
+    c.drawRect(this.toRect(), BasicPalette.white.paint);
   }
 
   @override
