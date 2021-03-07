@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 
 class MyGame extends BaseGame with DoubleTapDetector {
   Random rng;
+  SpriteComponent backgroundSprite = SpriteComponent();
   SpriteComponent playerSprite = SpriteComponent();
 
   Layer backgroundLayer;
@@ -33,10 +34,13 @@ class MyGame extends BaseGame with DoubleTapDetector {
 
   void initializeGraphics() async {
     /** initialize background */
-    final backgroundSprite = Sprite(await images.load('background.png'));
-    this.backgroundLayer = BackgroundLayer(backgroundSprite);
+    this.backgroundSprite
+      ..sprite = await loadSprite('background.png')
+      ..size = Vector2(this.size.x, this.size.y)
+      ..x = 0
+      ..y = 0;
+    add(this.backgroundSprite);
 
-    /** player sprite */
     this.playerSprite
       ..sprite = await loadSprite("ninja.png")
       ..size = Vector2(100.0, 100.0)
@@ -54,22 +58,14 @@ class MyGame extends BaseGame with DoubleTapDetector {
   update(double dt) {
     super.update(dt);
     if (this.running) {
-      updateFloors();
+      this.updateFloors();
     }
   }
 
   @override
   void render(Canvas canvas) {
+    // this.backgroundLayer.render(canvas);
     super.render(canvas);
-    try {
-      // this.backgroundLayer.render(canvas);
-
-      // this.playerSprite.render(canvas);
-
-      // for (var floor in this.floors) {
-      //   floor.render(canvas);
-      // }
-    } catch (e) {}
   }
 
   @override
@@ -89,8 +85,8 @@ class MyGame extends BaseGame with DoubleTapDetector {
     for (var floor in floors) {
       floor.x -= 5;
       if (floor.x + floor.width < 0) {
-        floors.remove(floor);
-        createNewFloor();
+        this.floors.remove(floor);
+        this.createNewFloor();
       }
     }
   }
@@ -119,23 +115,12 @@ class MyGame extends BaseGame with DoubleTapDetector {
   }
 }
 
-class BackgroundLayer extends PreRenderedLayer {
-  final Sprite sprite;
-
-  BackgroundLayer(this.sprite);
-
-  @override
-  void drawLayer() {
-    sprite.render(canvas, position: Vector2(0, 0));
-  }
-}
-
 class Floor extends SpriteComponent {
   String name;
 
   @override
   void render(Canvas c) {
-    // super.render(c);
+    super.render(c);
     c.drawRect(this.toRect(), BasicPalette.white.paint);
   }
 
