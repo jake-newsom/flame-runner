@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'dart:math';
 
-import 'package:kcm_app/floor.dart';
+// import 'package:kcm_app/floor.dart';
 
 import 'package:flame/game.dart';
 import 'package:flame/gestures.dart';
@@ -24,10 +24,6 @@ class MyGame extends BaseGame with DoubleTapDetector {
   Future<void> onLoad() async {
     initializeGraphics();
     initializeVariables();
-
-    for (var i = 0; i < 3; i++) {
-      createNewFloor();
-    }
   }
 
   void initializeVariables() {
@@ -45,9 +41,12 @@ class MyGame extends BaseGame with DoubleTapDetector {
       ..sprite = await loadSprite("ninja.png")
       ..size = Vector2(100.0, 100.0)
       ..x = 60
-      ..y = this.size.y - this.playerSprite.size.y;
+      ..y = this.size.y - this.playerSprite.size.y - 20;
 
-    this.gameLayer = GameLayer(this);
+    add(this.playerSprite);
+    for (var i = 0; i < 3; i++) {
+      this.createNewFloor();
+    }
     this.running = true;
   }
 
@@ -63,8 +62,13 @@ class MyGame extends BaseGame with DoubleTapDetector {
   void render(Canvas canvas) {
     super.render(canvas);
     try {
-      this.backgroundLayer.render(canvas);
-      this.gameLayer.render(canvas);
+      // this.backgroundLayer.render(canvas);
+
+      // this.playerSprite.render(canvas);
+
+      // for (var floor in this.floors) {
+      //   floor.render(canvas);
+      // }
     } catch (e) {}
   }
 
@@ -83,8 +87,8 @@ class MyGame extends BaseGame with DoubleTapDetector {
 
   void updateFloors() {
     for (var floor in floors) {
-      floor.position.x -= 5;
-      if (floor.position.x + floor.width < 0) {
+      floor.x -= 5;
+      if (floor.x + floor.width < 0) {
         floors.remove(floor);
         createNewFloor();
       }
@@ -99,17 +103,19 @@ class MyGame extends BaseGame with DoubleTapDetector {
 
     var startX = 0;
     if (this.floors.length > 0) {
-      startX +=
-          (this.floors.last.position.x + this.floors.last.width + gap).round();
+      startX += (this.floors.last.x + this.floors.last.width + gap).round();
     }
 
+    print(this.size.y - 20);
     Floor floor = Floor()
-      ..position = Vector2(startX.toDouble(), this.size.y - 20)
+      ..anchor = Anchor.topLeft
+      ..x = startX.toDouble()
+      ..y = this.size.y - 20
       ..height = 20
-      ..width = this.rng.nextInt(screenWidth).toDouble() + minWidth
-      ..anchor = Anchor.topLeft;
+      ..width = this.rng.nextInt(screenWidth).toDouble() + minWidth;
 
     this.floors.add(floor);
+    this.add(floor);
   }
 }
 
@@ -124,20 +130,22 @@ class BackgroundLayer extends PreRenderedLayer {
   }
 }
 
-class GameLayer extends DynamicLayer {
-  final MyGame game;
-
-  GameLayer(this.game);
+class Floor extends SpriteComponent {
+  String name;
 
   @override
-  void drawLayer() {
-    // draw player
-    game.playerSprite.sprite.render(canvas,
-        position: Vector2(game.playerSprite.x, game.playerSprite.y));
+  void render(Canvas c) {
+    // super.render(c);
+    c.drawRect(this.toRect(), BasicPalette.white.paint);
+  }
 
-    // draw floor tiles
-    for (var floor in this.game.floors) {
-      floor.render(canvas);
-    }
+  @override
+  void update(double dt) {
+    super.update(dt);
+  }
+
+  @override
+  void onMount() {
+    super.onMount();
   }
 }
