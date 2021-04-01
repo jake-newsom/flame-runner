@@ -1,7 +1,11 @@
 import 'dart:ui';
 import 'dart:math';
 
-// import 'package:kcm_app/floor.dart';
+import 'package:flame/geometry.dart';
+import 'package:kcm_app/entity.dart';
+import 'package:kcm_app/player.dart';
+import 'package:kcm_app/enemy.dart';
+import 'package:kcm_app/tree.dart';
 
 import 'package:flame/game.dart';
 import 'package:flame/gestures.dart';
@@ -9,128 +13,228 @@ import 'package:flame/components.dart';
 import 'package:flame/layers.dart';
 import 'package:flame/palette.dart';
 import 'package:flutter/material.dart';
+import 'package:flame/sprite.dart';
 
-class MyGame extends BaseGame with DoubleTapDetector {
+class MyGame extends BaseGame with TapDetector, HasCollidables {
   Random rng;
-  SpriteComponent backgroundSprite = SpriteComponent();
+
+  final TextConfig textConfig = TextConfig(color: const Color(0xFFFFFFFF));
+
+  /** Sprites */
+  Background backgroundSprite;
+  // SpriteComponent backgroundSprite = SpriteComponent();
   SpriteComponent playerSprite = SpriteComponent();
+  Sprite enemySprite;
+  Sprite spikesSprite;
+  Sprite treeSprite;
+
+  Player player;
 
   Layer backgroundLayer;
   Layer gameLayer;
-  List<Floor> floors;
+  List<Entity> floors;
+  List<Enemy> enemies;
 
-  bool running = false;
+  double gravity;
+  double speed;
+  double maxSpeed;
+
+  /** platform config */
+  double baseMinWidth;
+  double currentMinWidth;
+
+  bool debug = true;
+
+  /** game variables */
+  Timer interval;
+  int elapsedSecs;
+  bool running = true;
 
   @override
   Future<void> onLoad() async {
     initializeGraphics();
     initializeVariables();
+    this.startGame();
   }
 
   void initializeVariables() {
-    this.floors = [];
+    this.enemies = [];
     this.rng = new Random();
   }
 
   void initializeGraphics() async {
+    this.enemySprite = await loadSprite('enemy.png');
+    this.spikesSprite = await loadSprite('spikes.png');
+
     /** initialize background */
-    this.backgroundSprite
-      ..sprite = await loadSprite('background.png')
-      ..size = Vector2(this.size.x, this.size.y)
-      ..x = 0
-      ..y = 0;
+    this.backgroundSprite = new Background(await loadSprite("trees.jpg"), this);
     add(this.backgroundSprite);
 
-    this.playerSprite
-      ..sprite = await loadSprite("ninja.png")
-      ..size = Vector2(100.0, 100.0)
-      ..x = 60
-      ..y = this.size.y - this.playerSprite.size.y - 20;
+    await images.load("tree-spritesheet.png");
 
-    add(this.playerSprite);
-    for (var i = 0; i < 3; i++) {
-      this.createNewFloor();
-    }
-    this.running = true;
+    final playerSpriteSheet = SpriteSheet(
+      image: await images.load('viking.png'),
+      srcSize: Vector2.all(110.0),
+    );
+    final playerAnimation =
+        playerSpriteSheet.createAnimation(row: 0, stepTime: 0.1);
+
+    this.player = new Player(this)
+      ..animation = playerAnimation
+      ..anchor = Anchor.bottomRight
+      ..size = Vector2(100.0, 100.0)
+      ..x = 160
+      ..y = 0;
+
+    add(this.player);
   }
 
   @override
   update(double dt) {
-    super.update(dt);
     if (this.running) {
-      this.updateFloors();
+      super.update(dt);
+      if (interval != null) {
+        interval.update(dt);
+      }
     }
   }
 
   @override
   void render(Canvas canvas) {
-    // this.backgroundLayer.render(canvas);
     super.render(canvas);
+
+    textConfig.render(canvas, "Elapsed time: $elapsedSecs", Vector2(10, 10));
   }
 
   @override
   Color backgroundColor() => const Color(0xFF38607C);
 
   @override
-  void onDoubleTap() {
-    if (running) {
-      pauseEngine();
-    } else {
-      resumeEngine();
-    }
-    running = !running;
-  }
-
-  void updateFloors() {
-    for (var floor in floors) {
-      floor.x -= 5;
-      if (floor.x + floor.width < 0) {
-        this.floors.remove(floor);
-        this.createNewFloor();
+  void onTapDown(TapDownDetails tap) {
+    if (this.running) {
+      if (tap.globalPosition.dx < this.size.x ~/ 2) {
+        this.player.jump();
+      } else {
+        this.player.attack();
       }
+    } else {
+      this.startGame();
     }
   }
 
-  void createNewFloor() {
-    var screenWidth = (this.size.x).round();
-    var minWidth = screenWidth / 2;
+  void startGame() {
+    this.enemies = [];
 
-    var gap = this.rng.nextInt((screenWidth / 2).round()) + (screenWidth / 10);
+    this.gravity = 1.5;
+    this.speed = 6.0;
+    this.maxSpeed = 25;
 
-    var startX = 0;
-    if (this.floors.length > 0) {
-      startX += (this.floors.last.x + this.floors.last.width + gap).round();
+    /** platform config */
+    this.baseMinWidth = 140;
+    this.currentMinWidth = 300;
+
+    this.elapsedSecs = 0;
+
+    this.interval = Timer(
+      1,
+      callback: this.gameTick,
+      repeat: true,
+    );
+    this.interval.start();
+    this.running = true;
+  }
+
+  void endGame() {
+    this.interval.stop();
+    this.running = false;
+
+    for (var enemy in this.enemies) {
+      enemy.remove();
+    }
+  }
+
+  void gameTick() {
+    this.increaseDifficulty();
+    this.spawnObstacles();
+    this.elapsedSecs += 1;
+
+    this.spawnEnvironment();
+  }
+
+  void increaseDifficulty() {
+    /** bump up difficulty */
+    if (this.speed < this.maxSpeed) {
+      this.speed += 0.05;
     }
 
-    print(this.size.y - 20);
-    Floor floor = Floor()
-      ..anchor = Anchor.topLeft
-      ..x = startX.toDouble()
-      ..y = this.size.y - 20
-      ..height = 20
-      ..width = this.rng.nextInt(screenWidth).toDouble() + minWidth;
-
-    this.floors.add(floor);
-    this.add(floor);
+    if (this.currentMinWidth > this.baseMinWidth) {
+      this.currentMinWidth -= 1;
+    }
   }
+
+  void spawnObstacles() {
+    var i = this.rng.nextInt(100);
+
+    /** spawn enemy with random chance */
+    if (i > 80) {
+      this.createEnemy();
+    } else if (i > 60) {
+      this.createTrap();
+    }
+  }
+
+  void createEnemy() {
+    var enemyType = this.rng.nextInt(2);
+
+    Enemy baddie;
+    if (enemyType == 0) {
+      baddie = Enemy(this, true)
+        ..sprite = this.enemySprite
+        ..size = Vector2(60.0, 60.0)
+        ..x = this.size.x
+        ..y = this.size.y - 20;
+      baddie.setHitbox(Enemy.SOLDIER);
+    } else if (enemyType == 1) {
+      baddie = Enemy(this, false)
+        ..sprite = this.enemySprite
+        ..size = Vector2(100.0, 100.0)
+        ..x = this.size.x
+        ..y = this.size.y - 20;
+      baddie.setHitbox(Enemy.SOLDIER);
+    }
+    this.enemies.add(baddie);
+    this.add(baddie);
+  }
+
+  void createTrap() {
+    Enemy trap = Enemy(this, false)
+      ..sprite = this.spikesSprite
+      ..size = Vector2(100.0, 30.0)
+      ..x = this.size.x
+      ..y = this.size.y - 10;
+
+    trap.setHitbox(Enemy.SPIKES);
+    this.enemies.add(trap);
+    this.add(trap);
+  }
+
+  void spawnEnvironment() {
+    var i = this.rng.nextInt(10);
+    if (i > 6) {
+      this.add(new Tree(this));
+    }
+  }
+
+  void createPowerUp() {}
 }
 
-class Floor extends SpriteComponent {
-  String name;
+class Background extends SpriteComponent {
+  final priority = -10;
 
-  @override
-  void render(Canvas c) {
-    super.render(c);
-    c.drawRect(this.toRect(), BasicPalette.white.paint);
-  }
-
-  @override
-  void update(double dt) {
-    super.update(dt);
-  }
-
-  @override
-  void onMount() {
-    super.onMount();
+  Background(sprite, game) {
+    this.sprite = sprite;
+    this.size = Vector2(game.size.x, game.size.y);
+    this.x = 0;
+    this.y = 0;
   }
 }

@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  Flame.util.setLandscape();
-
-  print("starting from main");
+  Flame.device.setLandscape();
 
   runApp(
     GameWidget(
