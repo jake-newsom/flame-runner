@@ -113,8 +113,8 @@ class Player extends SpriteAnimationComponent with Hitbox, Collidable {
   void checkFloors() {
     bool grounded = false;
 
-    if (this.y > this.game.size.y - 20) {
-      this.y = this.game.size.y - 20;
+    if (this.y > this.game.size.y - 35) {
+      this.y = this.game.size.y - 35;
       grounded = true;
     }
     this.onFloor = grounded;

@@ -34,6 +34,7 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
   Layer gameLayer;
   List<Entity> floors;
   List<Enemy> enemies;
+  List<Ground> grounds;
 
   double gravity;
   double speed;
@@ -67,10 +68,19 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
     this.spikesSprite = await loadSprite('spikes.png');
 
     /** initialize background */
-    this.backgroundSprite = new Background(await loadSprite("trees.jpg"), this);
+    this.backgroundSprite =
+        new Background(await loadSprite("tree-bg.jpg"), this);
     add(this.backgroundSprite);
 
     await images.load("tree-spritesheet.png");
+    await images.load("rock.png");
+
+    this.grounds = [];
+    for (var i = 0; i < 4; i++) {
+      Ground g = new Ground(await loadSprite("ground.png"), this, i);
+      this.grounds.add(g);
+      add(g);
+    }
 
     final playerSpriteSheet = SpriteSheet(
       image: await images.load('viking.png'),
@@ -84,7 +94,7 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
       ..anchor = Anchor.bottomRight
       ..size = Vector2(100.0, 100.0)
       ..x = 160
-      ..y = 0;
+      ..y = this.size.y - 30;
 
     add(this.player);
   }
@@ -158,7 +168,7 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
     this.spawnObstacles();
     this.elapsedSecs += 1;
 
-    this.spawnEnvironment();
+    this.generateEnvironment();
   }
 
   void increaseDifficulty() {
@@ -218,10 +228,20 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
     this.add(trap);
   }
 
-  void spawnEnvironment() {
-    var i = this.rng.nextInt(10);
-    if (i > 6) {
-      this.add(new Tree(this));
+  void generateEnvironment() {
+    var frontLayer = this.rng.nextInt(10);
+    if (frontLayer > 5) {
+      this.add(new Tree(this, 1, 1.0));
+    }
+
+    var midLayer = this.rng.nextInt(10);
+    if (midLayer > 5) {
+      this.add(new Tree(this, 2, 0.5));
+    }
+
+    var backLayer = this.rng.nextInt(10);
+    if (backLayer > 5) {
+      this.add(new Tree(this, 3, 0.25));
     }
   }
 
@@ -236,5 +256,42 @@ class Background extends SpriteComponent {
     this.size = Vector2(game.size.x, game.size.y);
     this.x = 0;
     this.y = 0;
+  }
+}
+
+class Ground extends SpriteComponent {
+  final priority = -1;
+  int count;
+  MyGame game;
+
+  Ground(sprite, game, count) {
+    this.anchor = Anchor.topLeft;
+    this.count = count;
+    this.game = game;
+    this.sprite = sprite;
+    this.x = (game.size.x * 0.75) * count;
+    this.y = game.size.y - 80;
+    this.size = Vector2(game.size.x * 0.75, 100);
+  }
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+
+    this.x -= this.game.speed;
+
+    // clear tree once it's off screen
+    if (this.x + this.width < 0) {
+      this.reset();
+    }
+  }
+
+  void reset() {
+    var last = this.count - 1;
+    if (last < 0) {
+      last = 3;
+    }
+
+    this.x = this.game.grounds[last].x + this.game.grounds[last].width - 10;
   }
 }
