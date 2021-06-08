@@ -11,23 +11,37 @@ import 'package:flame/components.dart';
 import 'package:flame/palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/timer.dart';
+import 'package:flame/sprite.dart';
 
 class Player extends SpriteAnimationComponent with Hitbox, Collidable {
-  String name;
-  MyGame game;
-  bool jumping;
-  bool onFloor;
+  int? state;
+  String? name;
+  late MyGame game;
+  bool? jumping;
+  late bool onFloor;
 
-  bool attacking;
-  Timer attackTimer;
+  late bool attacking;
+  late Timer attackTimer;
+
+  late Timer stateTimer;
+
+  static int RUNNING = 1;
+  static int JUMPING = 2;
+  static int SLIDING = 3;
+  static int ATTACKING = 4;
 
   double ySpeed = 0;
 
-  Player(game) {
+  late SpriteSheet spritesheet;
+  late Map<String, SpriteAnimation> animations;
+
+  Player(game, spritesheet) {
     this.game = game;
+    this.state = Player.RUNNING;
     this.onFloor = false;
     this.jumping = false;
     this.attacking = false;
+    this.spritesheet = spritesheet;
 
     final shape = HitboxPolygon([
       Vector2(0, 0),
@@ -37,6 +51,38 @@ class Player extends SpriteAnimationComponent with Hitbox, Collidable {
       Vector2(-0.5, 0.2)
     ]);
     addShape(shape);
+
+    this.stateTimer = new Timer(0);
+
+    this.animations = new Map();
+    this.animations["run"] =
+        this.spritesheet.createAnimation(row: 0, stepTime: 0.1);
+    this.animations["jump"] = this
+        .spritesheet
+        .createAnimation(row: 2, stepTime: 0.1, loop: false, from: 0, to: 6);
+    this.animations["slide"] = this
+        .spritesheet
+        .createAnimation(row: 1, stepTime: 0.1, loop: false, from: 0, to: 4);
+    this.animations["attack"] = this
+        .spritesheet
+        .createAnimation(row: 3, stepTime: 0.1, loop: false, from: 0, to: 6);
+
+    this.animation = this.animations["run"];
+  }
+
+  void resetState() {
+    this.animation = this.animations["run"];
+    this.attacking = false;
+    this.state = Player.RUNNING;
+  }
+
+  void startStateTimer(double timerLength) {
+    this.stateTimer = Timer(
+      timerLength,
+      callback: this.resetState,
+      repeat: false,
+    );
+    this.stateTimer.start();
   }
 
   @override
@@ -61,13 +107,20 @@ class Player extends SpriteAnimationComponent with Hitbox, Collidable {
     this.checkFloors();
     if (this.onFloor) {
       this.ySpeed = 0;
+      if (this.jumping == true) {
+        this.animation = this.animations["run"];
+        this.animations["jump"]!.reset();
+      }
       this.jumping = false;
     }
 
-    if (this.attacking) {
-      print("update timer");
-      this.attackTimer.update(dt);
+    /** Progress timer if it's active */
+    if (this.stateTimer != null && this.stateTimer.isRunning()) {
+      this.stateTimer.update(dt);
     }
+    // if (this.attacking) {
+    //   this.attackTimer.update(dt);
+    // }
   }
 
   @override
@@ -88,26 +141,31 @@ class Player extends SpriteAnimationComponent with Hitbox, Collidable {
   }
 
   void jump() {
-    if (this.ySpeed == 0) {
+    if (this.ySpeed == 0 && this.state != Player.ATTACKING) {
       this.ySpeed = -25;
       this.jumping = true;
       this.onFloor = false;
+      this.animation = this.animations["jump"];
+    }
+  }
+
+  void slide() {
+    if (this.state == Player.RUNNING) {
+      this.state = Player.SLIDING;
+      this.animations["slide"]!.reset();
+      this.animation = this.animations["slide"];
+      this.startStateTimer(0.6);
     }
   }
 
   void attack() {
-    this.attacking = true;
-    this.attackTimer = Timer(
-      1,
-      callback: this.stopAttacking,
-      repeat: false,
-    );
-    this.attackTimer.start();
-  }
-
-  void stopAttacking() {
-    print("Stop attacking!");
-    this.attacking = false;
+    if (this.state == Player.RUNNING) {
+      this.state = Player.ATTACKING;
+      this.attacking = true;
+      this.animations["attack"]!.reset();
+      this.animation = this.animations["attack"];
+      this.startStateTimer(0.5);
+    }
   }
 
   void checkFloors() {

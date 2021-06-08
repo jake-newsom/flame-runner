@@ -12,8 +12,8 @@ import 'package:flame/palette.dart';
 import 'package:flutter/material.dart';
 
 class Enemy extends SpriteComponent with Hitbox, Collidable {
-  MyGame game;
-  bool killable;
+  late MyGame game;
+  late bool killable;
 
   static List<Vector2> SOLDIER = [
     Vector2(-1, -1),

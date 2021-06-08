@@ -10,11 +10,11 @@ import 'package:flutter/material.dart';
 import 'package:flame/sprite.dart';
 
 class Tree extends SpriteComponent {
-  MyGame game;
+  MyGame? game;
   int priority = -1;
-  double speedRatio;
+  late double speedRatio;
 
-  Paint overlay;
+  Paint? overlay;
 
   final int MINWIDTH = 60;
   final int MAXWIDTH = 240;
@@ -53,7 +53,7 @@ class Tree extends SpriteComponent {
   void update(double dt) {
     super.update(dt);
 
-    this.x -= this.game.speed * this.speedRatio;
+    this.x -= this.game!.speed * this.speedRatio;
 
     // clear tree once it's off screen
     if (this.x + (this.width * 4) < 0) {
@@ -67,13 +67,13 @@ class Tree extends SpriteComponent {
   }
 
   void generateTree() {
-    var numberOfBranches = game.rng.nextInt(3) + 1;
+    var numberOfBranches = game!.rng.nextInt(3) + 1;
     var trunkWidth =
-        game.rng.nextInt(this.MAXWIDTH - (this.priority * -15)) + this.MINWIDTH;
+        game!.rng.nextInt(this.MAXWIDTH - (this.priority * -15)) + this.MINWIDTH;
 
-    this.size = Vector2(trunkWidth.toDouble(), this.game.size.y);
-    this.x = this.game.size.x + (this.width * 1.5);
-    this.y = this.game.size.y - 50;
+    this.size = Vector2(trunkWidth.toDouble(), this.game!.size.y);
+    this.x = this.game!.size.x + (this.width * 1.5);
+    this.y = this.game!.size.y - 50;
     if (this.priority < -1) {
       this.y += 20;
     }
@@ -88,7 +88,7 @@ class Tree extends SpriteComponent {
         // branch.overridePaint.imageFilter =
         //     ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0);
         branch.overridePaint = this.overlay;
-        this.angle = ((this.game.rng.nextDouble() * 0.04) - 0.02) * pi;
+        this.angle = ((this.game!.rng.nextDouble() * 0.04) - 0.02) * pi;
       }
 
       this.addChild(branch, gameRef: this.game);
@@ -99,7 +99,7 @@ class Tree extends SpriteComponent {
             position: Vector2(0.0, 0.0),
             size: Vector2(this.size.x, this.size.y),
             sprite: this.sprite = Sprite(
-                this.game.images.fromCache("tree-spritesheet.png"),
+                this.game!.images.fromCache("tree-spritesheet.png"),
                 srcPosition: Vector2(0.0, 0.0),
                 srcSize: Vector2(321.0, 1009.0)),
             overridePaint: this.overlay),
@@ -110,7 +110,7 @@ class Tree extends SpriteComponent {
   }
 
   void generateStones() {
-    var numberofStones = game.rng.nextInt(3);
+    var numberofStones = game!.rng.nextInt(3);
     for (var i = 0; i < numberofStones; i++) {
       Stone stone = new Stone(this);
       if (this.priority < -1) {
@@ -123,13 +123,13 @@ class Tree extends SpriteComponent {
 
 class Stone extends SpriteComponent {
   int priority = 1;
-  Tree tree;
+  late Tree tree;
 
   Stone(tree) {
     this.tree = tree;
 
     this.anchor = Anchor.bottomCenter;
-    this.sprite = new Sprite(this.tree.game.images.fromCache("rock.png"),
+    this.sprite = new Sprite(this.tree.game!.images.fromCache("rock.png"),
         srcPosition: Vector2(0.0, 0.0));
     this.position = Vector2(
         nextInt(this.tree.width.round()).toDouble(), this.tree.height + 8);
@@ -138,18 +138,18 @@ class Stone extends SpriteComponent {
   }
 
   int nextInt(int max) {
-    return this.tree.game.rng.nextInt(max);
+    return this.tree.game!.rng.nextInt(max);
   }
 }
 
 class Branch extends SpriteComponent {
   int priority = -6;
-  Tree tree;
+  late Tree tree;
 
-  int variation;
-  int side;
-  double horizontalOffset;
-  double yPos;
+  late int variation;
+  int? side;
+  late double horizontalOffset;
+  late double yPos;
 
   List<List<Map>> branches = [
     [
@@ -174,9 +174,9 @@ class Branch extends SpriteComponent {
 
     this.anchor = Anchor.bottomRight;
     this.sprite = new Sprite(
-        this.tree.game.images.fromCache("tree-spritesheet.png"),
-        srcPosition: this.branches[this.side][this.variation]["position"],
-        srcSize: this.branches[this.side][this.variation]["size"]);
+        this.tree.game!.images.fromCache("tree-spritesheet.png"),
+        srcPosition: this.branches[this.side!][this.variation]["position"],
+        srcSize: this.branches[this.side!][this.variation]["size"]);
     this.position = Vector2(this.tree.width * this.horizontalOffset, this.yPos);
 
     if (this.side == 1) {
@@ -192,7 +192,7 @@ class Branch extends SpriteComponent {
     this.side = nextInt(2);
     this.horizontalOffset = 0.38;
 
-    Vector2 branchSize = this.branches[side][this.variation]["size"];
+    Vector2 branchSize = this.branches[side!][this.variation]["size"];
     int branchWidth = nextInt(branchSize.x.toInt()) + 60;
     int branchHeight = nextInt(branchSize.y.toInt()) + 60;
     this.size = Vector2(branchWidth.toDouble(), branchHeight.toDouble());
@@ -205,6 +205,6 @@ class Branch extends SpriteComponent {
   }
 
   int nextInt(int max) {
-    return this.tree.game.rng.nextInt(max);
+    return this.tree.game!.rng.nextInt(max);
   }
 }

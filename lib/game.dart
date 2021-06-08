@@ -15,41 +15,45 @@ import 'package:flame/palette.dart';
 import 'package:flutter/material.dart';
 import 'package:flame/sprite.dart';
 
-class MyGame extends BaseGame with TapDetector, HasCollidables {
-  Random rng;
+import 'package:sensors_plus/sensors_plus.dart';
 
-  final TextConfig textConfig = TextConfig(color: const Color(0xFFFFFFFF));
+class MyGame extends BaseGame with TapDetector, HasCollidables {
+  late Random rng;
+
+  // final TextConfig textConfig = TextConfig(color: const Color(0xFFFFFFFF));
 
   /** Sprites */
-  Background backgroundSprite;
+  late Background backgroundSprite;
   // SpriteComponent backgroundSprite = SpriteComponent();
   SpriteComponent playerSprite = SpriteComponent();
-  Sprite enemySprite;
-  Sprite spikesSprite;
-  Sprite treeSprite;
+  Sprite? enemySprite;
+  Sprite? spikesSprite;
+  Sprite? treeSprite;
 
-  Player player;
+  late Player player;
 
-  Layer backgroundLayer;
-  Layer gameLayer;
-  List<Entity> floors;
-  List<Enemy> enemies;
-  List<Ground> grounds;
+  Layer? backgroundLayer;
+  Layer? gameLayer;
+  List<Entity>? floors;
+  late List<Enemy?> enemies;
+  late List<Ground> grounds;
 
-  double gravity;
-  double speed;
-  double maxSpeed;
+  late double gravity;
+  late double speed;
+  late double maxSpeed;
 
   /** platform config */
-  double baseMinWidth;
-  double currentMinWidth;
+  late double baseMinWidth;
+  late double currentMinWidth;
 
   bool debug = true;
 
   /** game variables */
-  Timer interval;
-  int elapsedSecs;
+  Timer? interval;
+  late int elapsedSecs;
   bool running = true;
+
+  double inputThreshold = 0.7;
 
   @override
   Future<void> onLoad() async {
@@ -69,8 +73,11 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
 
     /** initialize background */
     this.backgroundSprite =
-        new Background(await loadSprite("tree-bg.jpg"), this);
+        new Background(await loadSprite("Background-4.png"), this);
     add(this.backgroundSprite);
+
+    add(new Background(await loadSprite("Background-3.png"), this));
+    add(new Background(await loadSprite("Background-2.png"), this));
 
     await images.load("tree-spritesheet.png");
     await images.load("rock.png");
@@ -83,14 +90,11 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
     }
 
     final playerSpriteSheet = SpriteSheet(
-      image: await images.load('viking.png'),
-      srcSize: Vector2.all(110.0),
+      image: await images.load('warrior.png'),
+      srcSize: Vector2.all(48.0),
     );
-    final playerAnimation =
-        playerSpriteSheet.createAnimation(row: 0, stepTime: 0.1);
 
-    this.player = new Player(this)
-      ..animation = playerAnimation
+    this.player = new Player(this, playerSpriteSheet)
       ..anchor = Anchor.bottomRight
       ..size = Vector2(100.0, 100.0)
       ..x = 160
@@ -104,7 +108,7 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
     if (this.running) {
       super.update(dt);
       if (interval != null) {
-        interval.update(dt);
+        interval!.update(dt);
       }
     }
   }
@@ -113,20 +117,20 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
   void render(Canvas canvas) {
     super.render(canvas);
 
-    textConfig.render(canvas, "Elapsed time: $elapsedSecs", Vector2(10, 10));
+    // textConfig.render(canvas, "Elapsed time: $elapsedSecs", Vector2(10, 10));
   }
 
   @override
   Color backgroundColor() => const Color(0xFF38607C);
 
   @override
-  void onTapDown(TapDownDetails tap) {
+  void onTapDown(TapDownInfo tap) {
     if (this.running) {
-      if (tap.globalPosition.dx < this.size.x ~/ 2) {
-        this.player.jump();
-      } else {
-        this.player.attack();
-      }
+      // if (tap.raw.globalPosition.dx < this.size.x ~/ 2) {
+      //   this.player.jump();
+      // } else {
+      //   this.player.attack();
+      // }
     } else {
       this.startGame();
     }
@@ -150,16 +154,17 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
       callback: this.gameTick,
       repeat: true,
     );
-    this.interval.start();
+    this.interval!.start();
     this.running = true;
+    this.listenForInput();
   }
 
   void endGame() {
-    this.interval.stop();
+    this.interval!.stop();
     this.running = false;
 
     for (var enemy in this.enemies) {
-      enemy.remove();
+      enemy!.remove();
     }
   }
 
@@ -196,7 +201,7 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
   void createEnemy() {
     var enemyType = this.rng.nextInt(2);
 
-    Enemy baddie;
+    Enemy? baddie;
     if (enemyType == 0) {
       baddie = Enemy(this, true)
         ..sprite = this.enemySprite
@@ -213,7 +218,7 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
       baddie.setHitbox(Enemy.SOLDIER);
     }
     this.enemies.add(baddie);
-    this.add(baddie);
+    this.add(baddie!);
   }
 
   void createTrap() {
@@ -246,6 +251,35 @@ class MyGame extends BaseGame with TapDetector, HasCollidables {
   }
 
   void createPowerUp() {}
+
+  void listenForInput() {
+    accelerometerEvents.listen((AccelerometerEvent event) {
+      // print(event);
+    });
+
+    userAccelerometerEvents.listen((UserAccelerometerEvent event) {
+      // print(event);
+      // if (event.x < -2.5) {
+      //   print("Jump 1");
+      // }
+      // if (event.z > this.inputThreshold) {
+      //   print("jump 2");
+      //   this.player.jump();
+      // }
+    });
+
+    gyroscopeEvents.listen((GyroscopeEvent event) {
+      // print(event);
+
+      if (event.x > this.inputThreshold) {
+        this.player.attack();
+      } else if (event.x < -this.inputThreshold) {
+        this.player.slide();
+      } else if (event.y < -this.inputThreshold) {
+        this.player.jump();
+      }
+    });
+  }
 }
 
 class Background extends SpriteComponent {
@@ -261,8 +295,8 @@ class Background extends SpriteComponent {
 
 class Ground extends SpriteComponent {
   final priority = -1;
-  int count;
-  MyGame game;
+  late int count;
+  late MyGame game;
 
   Ground(sprite, game, count) {
     this.anchor = Anchor.topLeft;

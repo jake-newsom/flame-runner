@@ -11,8 +11,8 @@ import 'package:flame/palette.dart';
 import 'package:flutter/material.dart';
 
 class Entity extends SpriteComponent with Hitbox, Collidable {
-  MyGame game;
-  HitboxRectangle hitbox;
+  late MyGame game;
+  late HitboxRectangle hitbox;
 
   Entity(parent) {
     this.game = parent;
